@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Для Шахризоды ♡</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital@1&family=Roboto:wght@400;500&display=swap">
+<style>
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;overflow:hidden;background:#070711;color:#f8e4ee;font:400 16px/1.5 Roboto,sans-serif;touch-action:manipulation}
+canvas{position:fixed;inset:0;display:block;background:radial-gradient(70% 50% at 50% 40%,#2a1838,#070711 70%)}
+.btn{padding:14px 32px;border:0;border-radius:40px;font:500 16px Roboto,sans-serif;color:#2a0f1e;cursor:pointer;background:linear-gradient(135deg,#f0a6c3,#c8719a);box-shadow:0 8px 26px #c8719a66}
+.btn:focus-visible{outline:2px solid #fff;outline-offset:3px}
+#intro{position:fixed;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px;text-align:center;background:#070711ee;transition:opacity 1.2s}
+#intro.off{opacity:0;pointer-events:none}
+h1,h2{font:italic 400 clamp(30px,8vw,46px)/1.25 "Playfair Display",serif;color:#f6c6d9}
+#intro p{color:#c79bb0;max-width:300px}
+#msg{position:fixed;left:0;right:0;bottom:15vh;padding:0 28px;text-align:center;min-height:4.5em;pointer-events:none;font:italic 400 clamp(19px,5vw,24px)/1.5 "Playfair Display",serif;color:#fbe7f0;opacity:0}
+#msg.in{animation:in 1s forwards}
+@keyframes in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+#count{position:fixed;left:0;right:0;bottom:6vh;text-align:center;font-size:14px;color:#b58aa2;pointer-events:none}
+#end{position:fixed;left:0;right:0;bottom:7vh;z-index:2;display:flex;flex-direction:column;align-items:center;gap:14px;padding:0 24px;text-align:center;opacity:0;pointer-events:none;transition:opacity 2s}
+#end.on{opacity:1;pointer-events:auto}
+#end h2{font-size:clamp(20px,5.5vw,26px)}
+#end h2 span{display:block;font-size:clamp(38px,11vw,56px);color:#ffe3a3;text-shadow:0 0 24px #ffd27a88}
+#end p{color:#d8aebf}
+#again{background:none;border:1px solid #f0a6c3;color:#f6c6d9;box-shadow:none;padding:10px 24px;font-size:14px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<section id="intro">
+  <h1>Шахризода,<br>у меня для тебя небо</h1>
+  <p>Нажимай на светящиеся звёзды и соединяй их.</p>
+  <button class="btn" id="go">Посмотреть ✦</button>
+</section>
+<p id="msg"></p>
+<p id="count"></p>
+<section id="end">
+  <h2>Это созвездие называется<span>Шахризода</span></h2>
+  <p>Я нашёл его специально для тебя ♡</p>
+  <button class="btn" id="again">Пройти ещё раз</button>
+</section>
+<script>
+const MSG=[
+"Ты первая звезда, которую я замечаю, даже когда вокруг тысячи огней.",
+"Твой смех — мой любимый звук на свете.",
+"Рядом с тобой я становлюсь лучше.",
+"Спасибо за каждый день, который мы проводим вместе.",
+"Ты красивее любого неба.",
+"С тобой даже тишина уютная.",
+"Я верю в тебя. Всегда.",
+"Ты превращаешь обычные дни в волшебные.",
+"Я хочу, чтобы ты была счастлива каждый день.",
+"И я выбираю тебя. Снова и снова ♡"
+];
+const N=MSG.length,HINT="Нажми на светящуюся звезду ✦";
+const $=s=>document.querySelector(s),c=$('#c'),x=c.getContext('2d');
+let W,H,bg=[],pts=[],idx=-1,tf=[],fin=0,done=false,started=false,shoot=[];
+
+function size(){
+  const D=devicePixelRatio||1;W=innerWidth;H=innerHeight;
+  c.width=W*D;c.height=H*D;x.setTransform(D,0,0,D,0,0);
+  bg=Array.from({length:Math.round(W*H/5000)},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.3+.3,p:Math.random()*6.3,s:.5+Math.random()*1.5}));
+  const s=Math.min(W,H*.8)/40,cx=W/2,cy=H*.44-2.5*s;
+  pts=Array.from({length:N},(_,k)=>{
+    const t=Math.PI+k*2*Math.PI/N;
+    return{x:cx+16*Math.sin(t)**3*s,y:cy-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))*s};
+  });
+}
+addEventListener('resize',size);size();
+
+function seg(a,b,t0,t){
+  const p=Math.min(1,Math.max(0,(t-t0)/700));
+  x.beginPath();x.moveTo(a.x,a.y);x.lineTo(a.x+(b.x-a.x)*p,a.y+(b.y-a.y)*p);x.stroke();
+}
+function star(p,r,col,glow){
+  x.shadowColor=col;x.shadowBlur=glow;x.fillStyle=col;
+  x.beginPath();x.arc(p.x,p.y,r,0,7);x.fill();x.shadowBlur=0;
+}
+function frame(t){
+  x.clearRect(0,0,W,H);
+  for(const b of bg){x.globalAlpha=.3+.5*Math.sin(t/1000*b.s+b.p)**2;x.fillStyle='#fff';x.beginPath();x.arc(b.x,b.y,b.r,0,7);x.fill();}
+  x.globalAlpha=1;
+  if(started){
+    if(fin&&t-fin>700){
+      x.globalAlpha=Math.min(.12,(t-fin-700)/20000);x.fillStyle='#f0a6c3';
+      x.beginPath();pts.forEach((p,i)=>i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y));x.fill();x.globalAlpha=1;
+    }
+    x.strokeStyle='#f0a6c3';x.lineWidth=1.8;x.lineCap='round';x.shadowColor='#f0a6c3';x.shadowBlur=10;
+    for(let i=1;i<=idx;i++)seg(pts[i-1],pts[i],tf[i],t);
+    if(fin)seg(pts[N-1],pts[0],fin,t);
+    x.shadowBlur=0;
+    pts.forEach((p,k)=>{
+      if(k<=idx)star(p,4.5+(done?1.5*Math.sin(t/500+k):0),'#ffe3a3',16);
+      else if(k===idx+1)star(p,5+2.5*Math.sin(t/260),'#fff3c9',26+10*Math.sin(t/260));
+      else star(p,2,'#ffffff55',0);
+    });
+    if(done){
+      if(Math.random()<.012)shoot.push({x:Math.random()*W,y:Math.random()*H*.5,vx:7+Math.random()*4,vy:3+Math.random()*2,l:1});
+      for(const s of shoot){
+        x.strokeStyle='rgba(255,230,240,'+s.l+')';x.lineWidth=1.5;
+        x.beginPath();x.moveTo(s.x,s.y);x.lineTo(s.x-s.vx*7,s.y-s.vy*7);x.stroke();
+        s.x+=s.vx;s.y+=s.vy;s.l-=.016;
+      }
+      shoot=shoot.filter(s=>s.l>0);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+let hintTimer;
+function setCount(){$('#count').textContent=idx<0?HINT:(idx+1)+' из '+N;}
+function say(i){const m=$('#msg');m.classList.remove('in');void m.offsetWidth;m.textContent=MSG[i];m.classList.add('in');}
+
+c.addEventListener('pointerdown',e=>{
+  if(!started||done)return;
+  const n=pts[idx+1];
+  if(Math.hypot(e.clientX-n.x,e.clientY-n.y)<40){
+    idx++;tf[idx]=performance.now();say(idx);setCount();
+    if(navigator.vibrate)navigator.vibrate(15);
+    if(idx===N-1){
+      done=true;
+      setTimeout(()=>{fin=performance.now()},900);
+      setTimeout(()=>{$('#msg').style.opacity=0;$('#msg').classList.remove('in');$('#count').textContent='';$('#end').classList.add('on')},4200);
+    }
+  }else{
+    $('#count').textContent=HINT;clearTimeout(hintTimer);hintTimer=setTimeout(setCount,1500);
+  }
+});
+$('#go').onclick=()=>{started=true;$('#intro').classList.add('off');setCount();};
+$('#again').onclick=()=>{
+  idx=-1;tf=[];fin=0;done=false;shoot=[];
+  $('#end').classList.remove('on');$('#msg').style.opacity='';$('#msg').textContent='';setCount();
+};
+</script>
+</body>
+</html>
